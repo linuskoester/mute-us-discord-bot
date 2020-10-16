@@ -1,8 +1,6 @@
 import discord
 import os
 
-from discord import voice_client
-
 
 class MyClient(discord.Client):
     async def on_ready(self):

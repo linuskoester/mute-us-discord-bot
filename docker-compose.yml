@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+    discordbot:
+        container_name: discordbot
+        build: .
+        command: python bot.py
+        volumes:
+            - .:/bot
+        environment:
+            - PYTHONUNBUFFERED=1
+        env_file:
+            - ./token.env

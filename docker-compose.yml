@@ -11,3 +11,4 @@ services:
             - PYTHONUNBUFFERED=1
         env_file:
             - ./token.env
+        restart: always

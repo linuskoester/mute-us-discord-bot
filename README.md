@@ -1,1 +1,1 @@
-mute-us-discord-bot
+# Discord Bot: Mute Us

@@ -37,10 +37,28 @@ def embed_muted(self, voice_channel, user):
     return embed
 
 
+def embed_disabled(self):
+    embed = discord.Embed(color=discord.Color.dark_grey())
+    embed.set_author(name=self.user.display_name,
+                     icon_url=self.user.avatar_url)
+    embed.add_field(name="Mute Us deaktiviert",
+                    value="Dieses Widget wurde deaktiviert, da sich niemand mehr in dem dazugehörigen Voicechannel befindet, ein neueres Widget existiert oder der Bot neugestartet wurde.\n\nMit dem Befehl `!muteus` kannst du jederzeit ein neues Widget erstellen!",
+                    inline=False)
+    return embed
+
+
 class MyClient(discord.Client):
     async def on_ready(self):
         print('Angemeldet als %s auf %s Servern!\n' %
               (self.user, len(self.guilds)))
+
+        # Entferne alte Mute Us-Widgets
+        for guild in self.guilds:
+            for channel in guild.text_channels:
+                async for message in channel.history(limit=200):
+                    if message.author == self.user and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
+                        await message.edit(embed=embed_disabled(self))
+                        await message.clear_reactions()
 
     async def on_message(self, message):
         if message.content in ["!invite", "!about", "!help"]:
@@ -91,6 +109,14 @@ class MyClient(discord.Client):
                 msg = await message.channel.send(embed=embed_default(self, voice_channel))
                 await msg.add_reaction("🔈")
                 await msg.add_reaction("🔇")
+
+                # Überprüfe ob bereits ein Mute Us-Widget existiert, entferne dieses
+
+                for channel in message.guild.text_channels:
+                    async for message in channel.history(limit=200):
+                        if message.author == self.user and message != msg and message.embeds[0].fields[0].name[2:] == voice_channel.name and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
+                            await message.edit(embed=embed_disabled(self))
+                            await message.clear_reactions()
 
             # Fehlermeldung, wenn der Benutzer sich nicht in einem Sprachkanal befindet
             else:
@@ -150,6 +176,18 @@ class MyClient(discord.Client):
                 #     elif reaction.emoji == "🔈" and member.voice.mute:
                 #         await member.edit(mute=False, reason="Mute Us")
                 #         await asyncio.sleep(0.15)
+
+    async def on_voice_state_update(self, member, before, after):
+        # Wenn ein Sprachkanal verlassen wird
+        if before.channel != after.channel and before.channel != None:
+            # Überprüft ob der verlassene Sprachkanal nun leer ist
+            if len(before.channel.members) == 0:
+                # Suche ob ein Mute Us Widget für diesen Channel existiert und entferne es
+                for channel in before.channel.guild.text_channels:
+                    async for message in channel.history(limit=200):
+                        if message.author == self.user and message.embeds[0].fields[0].name[2:] == before.channel.name and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
+                            await message.edit(embed=embed_disabled(self))
+                            await message.clear_reactions()
 
 
 client = MyClient()

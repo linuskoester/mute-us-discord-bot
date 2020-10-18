@@ -116,7 +116,7 @@ class MyClient(discord.Client):
                 # Überprüfe ob bereits ein Mute Us-Widget existiert, entferne dieses
 
                 for channel in message.guild.text_channels:
-                    async for message in channel.history(limit=200):
+                    async for message in channel.history(limit=100):
                         try:
                             if message.author == self.user and message != msg and message.embeds[0].fields[0].name[2:] == voice_channel.name and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
                                 await message.edit(embed=embed_disabled(self))
@@ -190,7 +190,7 @@ class MyClient(discord.Client):
             if len(before.channel.members) == 0:
                 # Suche ob ein Mute Us Widget für diesen Channel existiert und entferne es
                 for channel in before.channel.guild.text_channels:
-                    async for message in channel.history(limit=200):
+                    async for message in channel.history(limit=100):
                         try:
                             if message.author == self.user and message.embeds[0].fields[0].name[2:] == before.channel.name and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
                                 await message.edit(embed=embed_disabled(self))

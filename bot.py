@@ -1,7 +1,40 @@
 import discord
 import os
 import sys
-import asyncio
+
+
+def embed_default(self, voice_channel, user=None):
+    embed = discord.Embed(color=discord.Color.green())
+    embed.set_author(name=self.user.display_name,
+                     icon_url=self.user.avatar_url)
+    embed.add_field(name="🔈 %s" % voice_channel.name,
+                    value="Mute Us wurde erfolgreich aktiviert! Mit den Reaktionen unten kann jeder den Sprachkanal **%s** laut- und stummschalten." % voice_channel.name,
+                    inline=False)
+    return embed
+
+
+def embed_not_muted(self, voice_channel, user):
+    embed = discord.Embed(color=discord.Color.green())
+    embed.set_author(name=self.user.display_name,
+                     icon_url=self.user.avatar_url)
+    embed.add_field(name="🔈 %s" % voice_channel.name,
+                    value="Mute Us wurde erfolgreich aktiviert! Mit den Reaktionen unten kann jeder den Sprachkanal **%s** laut- und stummschalten." % voice_channel.name,
+                    inline=False)
+    embed.set_footer(text="%s wurde von %s lautgeschaltet." %
+                     (voice_channel.name, user.display_name))
+    return embed
+
+
+def embed_muted(self, voice_channel, user):
+    embed = discord.Embed(color=discord.Color.red())
+    embed.set_author(name=self.user.display_name,
+                     icon_url=self.user.avatar_url)
+    embed.add_field(name="🔇 %s" % voice_channel.name,
+                    value="Mute Us wurde erfolgreich aktiviert! Mit den Reaktionen unten kann jeder den Sprachkanal **%s** laut- und stummschalten." % voice_channel.name,
+                    inline=False)
+    embed.set_footer(text="%s wurde von %s stummgeschaltet." %
+                     (voice_channel.name, user.display_name))
+    return embed
 
 
 class MyClient(discord.Client):
@@ -55,15 +88,7 @@ class MyClient(discord.Client):
 
             # Wenn sich der Benutzer in einem Sprachkanal befindet, wird die Nachricht mit den Reaktionen ausgegeben
             if voice_channel:
-                embed = discord.Embed()
-                embed.set_author(name=self.user.display_name,
-                                 icon_url=self.user.avatar_url)
-                embed.add_field(
-                    name="🔈 %s" % voice_channel.name,
-                    value="""Mute Us wurde erfolgreich aktiviert! Mit den Reaktionen unten
-                            kann jeder den Sprachkanal **%s** laut- und stummschalten.""" % voice_channel.name,
-                    inline=False)
-                msg = await message.channel.send(embed=embed)
+                msg = await message.channel.send(embed=embed_default(self, voice_channel))
                 await msg.add_reaction("🔈")
                 await msg.add_reaction("🔇")
 
@@ -90,14 +115,41 @@ class MyClient(discord.Client):
             voice_channel = discord.utils.get(
                 reaction.message.guild.voice_channels, name=reaction.message.embeds[0].fields[0].name[2:])
 
-            # Schaltet den Sprachkanal laut-/stumm
-            for member in voice_channel.members:
-                if reaction.emoji == "🔇" and not member.voice.mute:
-                    await member.edit(mute=True, reason="Mute Us")
-                    await asyncio.sleep(0.15)
-                elif reaction.emoji == "🔈" and member.voice.mute:
-                    await member.edit(mute=False, reason="Mute Us")
-                    await asyncio.sleep(0.15)
+            if user in voice_channel.members:
+                # Sprachkanal stumm
+                if reaction.emoji == "🔇" and reaction.message.embeds[0].fields[0].name[:1] != "🔇":
+                    await reaction.message.edit(embed=embed_muted(self, voice_channel, user))
+
+                    # Push-to-Talk
+                    await voice_channel.set_permissions(reaction.message.guild.default_role, use_voice_activation=False, reason="Benutzer %s hat alle stummgeschaltet (Mute Us-Bot)." % user)
+
+                    # Force Mute
+                    # ...
+
+                    print("Der Sprachkanal %s wurde von %s stummgeschaltet." %
+                          (voice_channel, user))
+
+                # Sprachkanal laut
+                elif reaction.emoji == "🔈" and reaction.message.embeds[0].fields[0].name[:1] != "🔈":
+                    await reaction.message.edit(embed=embed_not_muted(self, voice_channel, user))
+
+                    # Push-to-Talk
+                    await voice_channel.set_permissions(reaction.message.guild.default_role, use_voice_activation=None, reason="Benutzer %s hat alle lautgeschaltet (Mute Us-Bot)." % user)
+
+                    # Force Mute
+                    # ...
+
+                    print("Der Sprachkanal %s wurde von %s lautgeschaltet." %
+                          (voice_channel, user))
+
+                # Alte Stummschalt-Variante (jede Person einzelnd)
+                # for member in voice_channel.members:
+                #     if reaction.emoji == "🔇" and not member.voice.mute:
+                #         await member.edit(mute=True, reason="Mute Us")
+                #         await asyncio.sleep(0.15)
+                #     elif reaction.emoji == "🔈" and member.voice.mute:
+                #         await member.edit(mute=False, reason="Mute Us")
+                #         await asyncio.sleep(0.15)
 
 
 client = MyClient()

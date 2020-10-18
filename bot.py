@@ -31,8 +31,18 @@ class MyClient(discord.Client):
             await message.channel.send(embed=embed)
 
         if message.content in ["!reload", "!restart"] and message.author.id == 219389750111502348:
-            # Lädt das Programm neu
+            # Startet das Programm neu
             print("Bot per Befehl neugestartet.\n")
+            await message.add_reaction("✅")
+            os.execv(sys.executable, ['python'] + [sys.argv[0]])
+
+        if message.content in ["!update", "!pull"] and message.author.id == 219389750111502348:
+            # Lädt die neuste Version herunter
+            print("Neuste Version wird heruntergeladen...\n")
+            await message.add_reaction("⬇️")
+            os.system("git pull https://github.com/CrazyEasy/mute-us-discord-bot")
+            # Startet das Programm neu
+            print("Neuste Version runtergeladen. Bot wird neugestartet.\n")
             await message.add_reaction("✅")
             os.execv(sys.executable, ['python'] + [sys.argv[0]])
 

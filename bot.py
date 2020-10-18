@@ -75,7 +75,7 @@ class MyClient(discord.Client):
                 embed.add_field(
                     name="Fehler",
                     value="""Du musst dich in einem Sprachkanal befinden, um diesen
-                             Befehl ausführen zu können.""",
+                             Befehl ausführen zu können!""",
                     inline=False)
                 await message.channel.send(embed=embed)
 

@@ -55,13 +55,16 @@ class MyClient(discord.Client):
         # Entferne alte Mute Us-Widgets
         for guild in self.guilds:
             for channel in guild.text_channels:
-                async for message in channel.history(limit=100):
-                    try:
-                        if message.author == self.user and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
-                            await message.edit(embed=embed_disabled(self))
-                            await message.clear_reactions()
-                    except IndexError:
-                        pass
+                try:
+                    async for message in channel.history(limit=100):
+                        try:
+                            if message.author == self.user and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
+                                await message.edit(embed=embed_disabled(self))
+                                await message.clear_reactions()
+                        except IndexError:
+                            pass
+                except discord.errors.Forbidden:
+                    pass
 
     async def on_message(self, message):
         if message.content in ["!invite", "!about", "!help"]:
@@ -116,13 +119,16 @@ class MyClient(discord.Client):
                 # Überprüfe ob bereits ein Mute Us-Widget existiert, entferne dieses
 
                 for channel in message.guild.text_channels:
-                    async for message in channel.history(limit=100):
-                        try:
-                            if message.author == self.user and message != msg and message.embeds[0].fields[0].name[2:] == voice_channel.name and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
-                                await message.edit(embed=embed_disabled(self))
-                                await message.clear_reactions()
-                        except IndexError:
-                            pass
+                    try:
+                        async for message in channel.history(limit=100):
+                            try:
+                                if message.author == self.user and message != msg and message.embeds[0].fields[0].name[2:] == voice_channel.name and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
+                                    await message.edit(embed=embed_disabled(self))
+                                    await message.clear_reactions()
+                            except IndexError:
+                                pass
+                    except discord.errors.Forbidden:
+                        pass
 
             # Fehlermeldung, wenn der Benutzer sich nicht in einem Sprachkanal befindet
             else:
@@ -190,13 +196,16 @@ class MyClient(discord.Client):
             if len(before.channel.members) == 0:
                 # Suche ob ein Mute Us Widget für diesen Channel existiert und entferne es
                 for channel in before.channel.guild.text_channels:
-                    async for message in channel.history(limit=100):
-                        try:
-                            if message.author == self.user and message.embeds[0].fields[0].name[2:] == before.channel.name and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
-                                await message.edit(embed=embed_disabled(self))
-                                await message.clear_reactions()
-                        except IndexError:
-                            pass
+                    try:
+                        async for message in channel.history(limit=100):
+                            try:
+                                if message.author == self.user and message.embeds[0].fields[0].name[2:] == before.channel.name and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
+                                    await message.edit(embed=embed_disabled(self))
+                                    await message.clear_reactions()
+                            except IndexError:
+                                pass
+                    except discord.errors.Forbidden:
+                        pass
 
 
 client = MyClient()

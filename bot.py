@@ -1,6 +1,7 @@
 import discord
 import os
 import sys
+import asyncio
 
 
 def embed_default(self, voice_channel, user=None):
@@ -47,6 +48,23 @@ def embed_disabled(self):
     return embed
 
 
+async def is_muted(self, voice_channel):
+    if voice_channel == None:
+        return False
+    for channel in voice_channel.guild.text_channels:
+        try:
+            async for message in channel.history(limit=100):
+                try:
+                    if message.author == self.user and message.embeds[0].fields[0].value.startswith("Mute Us wurde erfolgreich aktiviert!"):
+                        if message.embeds[0].fields[0].name[2:] == voice_channel.name and message.embeds[0].fields[0].name[:1] == "🔇":
+                            return True
+                except IndexError:
+                    pass
+        except discord.errors.Forbidden:
+            pass
+    return False
+
+
 class MyClient(discord.Client):
     async def on_ready(self):
         print('Angemeldet als %s auf %s Servern!\n' %
@@ -67,7 +85,7 @@ class MyClient(discord.Client):
                     pass
 
     async def on_message(self, message):
-        if message.content in ["!invite", "!about", "!help"]:
+        if message.content in ["!invite", "!about", "!help", "!info", "!hilfe", "!github", "!commands", "!befehle", "!einladung", "!einladungslink", "!add", "!link"]:
             # Zeigt den About-Dialog
             embed = discord.Embed(color=0xffde28)
             embed.set_author(name=self.user.display_name,
@@ -159,10 +177,13 @@ class MyClient(discord.Client):
                     await reaction.message.edit(embed=embed_muted(self, voice_channel, user))
 
                     # Push-to-Talk
-                    await voice_channel.set_permissions(reaction.message.guild.default_role, use_voice_activation=False, reason="Benutzer %s hat alle stummgeschaltet (Mute Us-Bot)." % user)
+                    # await voice_channel.set_permissions(reaction.message.guild.default_role, use_voice_activation=False, reason="Benutzer %s hat alle stummgeschaltet (Mute Us-Bot)." % user)
 
                     # Force Mute
-                    # ...
+                    for member in voice_channel.members:
+                        if not member.voice.mute:
+                            await member.edit(mute=True, reason="Benutzer %s hat alle stummgeschaltet (Mute Us-Bot)." % user)
+                            await asyncio.sleep(0.2)
 
                     print("Der Sprachkanal %s wurde von %s stummgeschaltet." %
                           (voice_channel, user))
@@ -171,26 +192,30 @@ class MyClient(discord.Client):
                 elif reaction.emoji == "🔈" and reaction.message.embeds[0].fields[0].name[:1] != "🔈":
                     await reaction.message.edit(embed=embed_not_muted(self, voice_channel, user))
 
-                    # Push-to-Talk
-                    await voice_channel.set_permissions(reaction.message.guild.default_role, use_voice_activation=None, reason="Benutzer %s hat alle lautgeschaltet (Mute Us-Bot)." % user)
+                    # Disable Push-to-Talk
+                    # await voice_channel.set_permissions(reaction.message.guild.default_role, use_voice_activation=None, reason="Benutzer %s hat alle lautgeschaltet (Mute Us-Bot)." % user)
 
-                    # Force Mute
-                    # ...
+                    # Disable Force Mute
+                    for member in voice_channel.members:
+                        if member.voice.mute:
+                            await member.edit(mute=False, reason="Benutzer %s hat alle lautgeschaltet (Mute Us-Bot)." % user)
+                            await asyncio.sleep(0.2)
 
                     print("Der Sprachkanal %s wurde von %s lautgeschaltet." %
                           (voice_channel, user))
 
-                # Alte Stummschalt-Variante (jede Person einzelnd)
-                # for member in voice_channel.members:
-                #     if reaction.emoji == "🔇" and not member.voice.mute:
-                #         await member.edit(mute=True, reason="Mute Us")
-                #         await asyncio.sleep(0.15)
-                #     elif reaction.emoji == "🔈" and member.voice.mute:
-                #         await member.edit(mute=False, reason="Mute Us")
-                #         await asyncio.sleep(0.15)
-
     async def on_voice_state_update(self, member, before, after):
-        # Wenn ein Sprachkanal verlassen wird
+        # Mute Mitglieder, die gemuteten Channel betreten
+        if before.channel != after.channel and await is_muted(self, after.channel) and not member.voice.mute:
+            await member.edit(mute=True, reason="Benutzer hat gemuteten Sprachkanal betreten (Mute Us-Bot).")
+            await asyncio.sleep(0.2)
+
+        # Entmute Mitglieder, die nicht-gemuteten Channel betreten
+        if before.channel != after.channel and not await is_muted(self, after.channel) and member.voice.mute:
+            await member.edit(mute=False, reason="Benutzer hat gemuteten Sprachkanal verlassen (Mute Us-Bot).")
+            await asyncio.sleep(0.2)
+
+            # Entferne Widget wenn Channel leer
         if before.channel != after.channel and before.channel != None:
             # Überprüft ob der verlassene Sprachkanal nun leer ist
             if len(before.channel.members) == 0:

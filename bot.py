@@ -4,11 +4,21 @@ import sys
 import asyncio
 
 
-def embed_default(self, voice_channel, user=None):
+def embed_not_muted_default(self, voice_channel, user=None):
     embed = discord.Embed(color=discord.Color.green())
     embed.set_author(name=self.user.display_name,
                      icon_url=self.user.avatar_url)
     embed.add_field(name="🔈 %s" % voice_channel.name,
+                    value="Mute Us wurde erfolgreich aktiviert! Mit den Reaktionen unten kann jeder den Sprachkanal **%s** laut- und stummschalten." % voice_channel.name,
+                    inline=False)
+    return embed
+
+
+def embed_muted_default(self, voice_channel, user=None):
+    embed = discord.Embed(color=discord.Color.red())
+    embed.set_author(name=self.user.display_name,
+                     icon_url=self.user.avatar_url)
+    embed.add_field(name="🔇 %s" % voice_channel.name,
                     value="Mute Us wurde erfolgreich aktiviert! Mit den Reaktionen unten kann jeder den Sprachkanal **%s** laut- und stummschalten." % voice_channel.name,
                     inline=False)
     return embed
@@ -130,7 +140,10 @@ class MyClient(discord.Client):
 
             # Wenn sich der Benutzer in einem Sprachkanal befindet, wird die Nachricht mit den Reaktionen ausgegeben
             if voice_channel:
-                msg = await message.channel.send(embed=embed_default(self, voice_channel))
+                if await is_muted(self, voice_channel):
+                    msg = await message.channel.send(embed=embed_muted_default(self, voice_channel))
+                else:
+                    msg = await message.channel.send(embed=embed_not_muted_default(self, voice_channel))
                 await msg.add_reaction("🔈")
                 await msg.add_reaction("🔇")
 
@@ -171,9 +184,17 @@ class MyClient(discord.Client):
             voice_channel = discord.utils.get(
                 reaction.message.guild.voice_channels, name=reaction.message.embeds[0].fields[0].name[2:])
 
-            if user in voice_channel.members:
+            # Überprüfe ob Reaktionen vom Bot vorhanden sind (Cooldown)
+            cooldown = False
+            for r in reaction.message.reactions:
+                if r.me and r.emoji == "🔈":
+                    cooldown = True
+                    break
+
+            if user in voice_channel.members and cooldown:
                 # Sprachkanal stumm
                 if reaction.emoji == "🔇" and reaction.message.embeds[0].fields[0].name[:1] != "🔇":
+                    await reaction.message.clear_reactions()
                     await reaction.message.edit(embed=embed_muted(self, voice_channel, user))
 
                     # Push-to-Talk
@@ -188,8 +209,12 @@ class MyClient(discord.Client):
                     print("Der Sprachkanal %s wurde von %s stummgeschaltet." %
                           (voice_channel, user))
 
+                    await reaction.message.add_reaction("🔈")
+                    await reaction.message.add_reaction("🔇")
+
                 # Sprachkanal laut
                 elif reaction.emoji == "🔈" and reaction.message.embeds[0].fields[0].name[:1] != "🔈":
+                    await reaction.message.clear_reactions()
                     await reaction.message.edit(embed=embed_not_muted(self, voice_channel, user))
 
                     # Disable Push-to-Talk
@@ -203,6 +228,9 @@ class MyClient(discord.Client):
 
                     print("Der Sprachkanal %s wurde von %s lautgeschaltet." %
                           (voice_channel, user))
+
+                    await reaction.message.add_reaction("🔈")
+                    await reaction.message.add_reaction("🔇")
 
     async def on_voice_state_update(self, member, before, after):
         # Mute Mitglieder, die gemuteten Channel betreten

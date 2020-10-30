@@ -233,17 +233,7 @@ class MyClient(discord.Client):
                     await reaction.message.add_reaction("🔇")
 
     async def on_voice_state_update(self, member, before, after):
-        # Mute Mitglieder, die gemuteten Channel betreten
-        if before.channel != after.channel and await is_muted(self, after.channel) and not member.voice.mute:
-            await member.edit(mute=True, reason="Benutzer hat gemuteten Sprachkanal betreten (Mute Us-Bot).")
-            await asyncio.sleep(0.2)
-
-        # Entmute Mitglieder, die nicht-gemuteten Channel betreten
-        if before.channel != after.channel and not await is_muted(self, after.channel) and member.voice.mute:
-            await member.edit(mute=False, reason="Benutzer hat gemuteten Sprachkanal verlassen (Mute Us-Bot).")
-            await asyncio.sleep(0.2)
-
-            # Entferne Widget wenn Channel leer
+        # Entferne Widget wenn Channel leer
         if before.channel != after.channel and before.channel != None:
             # Überprüft ob der verlassene Sprachkanal nun leer ist
             if len(before.channel.members) == 0:
@@ -259,6 +249,16 @@ class MyClient(discord.Client):
                                 pass
                     except discord.errors.Forbidden:
                         pass
+
+        # Mute Mitglieder, die gemuteten Channel betreten
+        elif before.channel != after.channel and await is_muted(self, after.channel) and not member.voice.mute:
+            await member.edit(mute=True, reason="Benutzer hat gemuteten Sprachkanal betreten (Mute Us-Bot).")
+            await asyncio.sleep(0.2)
+
+        # Entmute Mitglieder, die nicht-gemuteten Channel betreten
+        elif before.channel != after.channel and not await is_muted(self, after.channel) and member.voice.mute:
+            await member.edit(mute=False, reason="Benutzer hat gemuteten Sprachkanal verlassen (Mute Us-Bot).")
+            await asyncio.sleep(0.2)
 
 
 client = MyClient()
